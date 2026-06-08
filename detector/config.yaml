@@ -54,8 +54,6 @@ rooms:
         rule: "There are no books left out on a table or desk; surfaces are clear of books."
       - label: "Art supplies out"
         rule: "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
-      - label: "Desk chair out"
-        rule: "Compared to the reference photo, the desk chair is pushed in close to the desk, not pulled out into the room."
       - label: "Lounge chair messy"
         rule: "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."
 
