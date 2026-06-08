@@ -1,0 +1,16 @@
+# secrets / local config
+detector/.env
+firmware/src/config.h
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# platformio
+.pio/
+.vscode/
+
+# local test images
+detector/samples/

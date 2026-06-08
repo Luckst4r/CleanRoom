@@ -1,0 +1,11 @@
+// Copy this file to config.h (which is gitignored) and fill in your values.
+#pragma once
+
+#define WIFI_SSID     "your-wifi-name"
+#define WIFI_PASSWORD "your-wifi-password"
+
+// The Mac mini's LAN IP and the detector port from detector/config.yaml.
+#define STATUS_URL "http://192.168.1.10:8080/status"
+
+// How often the screen polls the detector, in milliseconds.
+#define POLL_INTERVAL_MS 5000

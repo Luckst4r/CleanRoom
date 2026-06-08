@@ -1,0 +1,38 @@
+# CleanRoom detector configuration
+
+poll_interval_seconds: 60   # how often each room is checked (tidiness changes slowly)
+debounce_readings: 2        # a room only flips state after this many identical readings in a row
+
+vision:
+  # Local, OpenAI-compatible vision endpoint. The default below is Ollama running
+  # on the Mac mini, so camera frames never leave the machine.
+  #   1. Install Ollama (https://ollama.com), then: ollama pull qwen2.5vl:7b
+  #   2. Ollama serves the API at http://localhost:11434/v1 automatically.
+  base_url: "http://localhost:11434/v1"
+  model: "qwen2.5vl:7b"   # a vision model that fits in 16GB; alternatives: minicpm-v, llama3.2-vision
+  force_json: true        # ask the server to return strict JSON (Ollama supports this)
+  max_image_width: 1024   # frames are downscaled to this width before analysis
+  jpeg_quality: 80
+  timeout_seconds: 120    # local models can be slower than cloud; give them room
+  # api_key: only needed for cloud backends. Leave unset for local Ollama. If a
+  # backend needs one, set it in detector/.env as VISION_API_KEY rather than here.
+
+server:
+  host: "0.0.0.0"   # the LilyGo screen polls this; 0.0.0.0 = reachable on your LAN
+  port: 8080
+
+rooms:
+  - name: "Child's Bedroom"
+    # RTSP from the Tapo cam. Create a "Camera Account" in the Tapo app
+    # (Advanced Settings -> Camera Account) and use those credentials here.
+    # Use a static DHCP lease for the camera so the IP doesn't change.
+    #   stream1 = full 2K, stream2 = lower res (either works; stream2 is lighter)
+    # For local testing without a camera, set source to an image file path, e.g.:
+    #   source: "samples/childs_bedroom.jpg"
+    source: "rtsp://USERNAME:PASSWORD@192.168.1.50:554/stream1"
+    # The criteria for THIS room. Be specific — "tidy" means different things per room.
+    criteria: >
+      The room is UNTIDY if ANY of the following are visible:
+      a book on the floor, a book left out on a table or other surface,
+      or clothes on the floor.
+      If none of those are present, the room is TIDY.
