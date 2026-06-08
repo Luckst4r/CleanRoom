@@ -77,9 +77,12 @@ separately and the room is untidy if any item fails. `python check.py` prints a
 - **Relative items** (furniture position/orientation, arrangement) — set
   `rooms[0].reference_image` to a photo of the room when tidy; the model compares
   against it. Capture one with `python check.py && cp last_frame.jpg reference.jpg`.
-- **How fast it reacts** — `poll_interval_seconds` (default 60) and
-  `debounce_readings` (default 2: two identical readings in a row before the
-  state flips, which prevents flicker).
+- **When/how often it checks** — see the global `schedule` (timezone + quiet
+  hours, when no room is checked) and each room's `schedule` (`default_interval_seconds`,
+  optional `peak_interval_seconds` with `weekday_windows`/`weekend_windows`). Rooms
+  are checked round-robin by their own cadence.
+- **Flicker** — `debounce_readings` (default 2: two identical readings in a row
+  before the state flips).
 - **Model** — `vision.model`. List what you've pulled with `ollama list`, or
   browse more vision models at https://ollama.com/search?c=vision.
 
@@ -143,8 +146,11 @@ seconds.
     }
   ],
   "checking": false,            // true while a reading is in progress
+  "checking_room": null,        // which room is being read right now
+  "next_room": "Child's Bedroom", // which room is up next
   "next_check_in": 90,          // seconds until the next reading (screen counts this down)
-  "poll_interval_seconds": 120,
+  "quiet": false,               // true during quiet hours (no checks)
+  "resume_time": null,          // when quiet hours end, e.g. "6:00 AM"
   "updated_at": "2026-06-08T10:00:05"
 }
 ```

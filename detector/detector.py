@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 import cv2
 import requests
 
+from schedule import Scheduler
+
 
 # --------------------------------------------------------------------------- #
 # Vision backend (local Ollama / any OpenAI-compatible endpoint)
@@ -214,6 +216,8 @@ class RoomState:
     checklist: list
     debounce: int
     reference_jpeg: bytes | None = None  # photo of this room when tidy (optional)
+    schedule: dict = field(default_factory=dict)  # per-room cadence config
+    last_ts: float = 0.0                 # monotonic-ish wall time of last check attempt
     tidy: bool = True                    # assume clean until proven otherwise
     reason: str = "not checked yet"
     items: list = field(default_factory=list)   # failed checklist items
@@ -272,8 +276,8 @@ class Monitor:
         )
         self.max_width = v.get("max_image_width", 1024)
         self.jpeg_quality = v.get("jpeg_quality", 80)
-        self.poll_interval = cfg.get("poll_interval_seconds", 60)
         debounce = cfg.get("debounce_readings", 2)
+        self.sched = Scheduler(cfg.get("schedule", {}))
         self.rooms = [
             RoomState(
                 name=r["name"],
@@ -281,14 +285,19 @@ class Monitor:
                 checklist=r["checklist"],
                 debounce=debounce,
                 reference_jpeg=self._load_reference(r.get("reference_image")),
+                schedule=r.get("schedule", {}),
             )
             for r in cfg["rooms"]
         ]
         self._lock = threading.Lock()
         self._stop = threading.Event()
-        # Timing surfaced to the screen so it can show a live countdown.
+        # Scheduling state surfaced to the screen so it can show what's happening.
         self.checking = False
+        self.checking_room = None    # room being read right now
+        self.next_room = None        # room that will be read next
         self.next_check_at = time.time()
+        self.quiet = False           # true during quiet hours (no checks)
+        self.resume_str = None       # when quiet hours end, e.g. "6:00 AM"
 
     def _load_reference(self, path):
         """Pre-load a room's 'tidy' reference photo, if configured."""
@@ -307,7 +316,11 @@ class Monitor:
         with self._lock:
             rooms = [r.public() for r in self.rooms]
             checking = self.checking
+            checking_room = self.checking_room
+            next_room = self.next_room
             next_at = self.next_check_at
+            quiet = self.quiet
+            resume = self.resume_str
         untidy = [r["name"] for r in rooms if not r["tidy"]]
         next_in = 0 if checking else max(0, int(round(next_at - time.time())))
         return {
@@ -315,8 +328,11 @@ class Monitor:
             "untidy_rooms": untidy,
             "rooms": rooms,
             "checking": checking,            # true while a reading is in progress
+            "checking_room": checking_room,  # which room is being read
+            "next_room": next_room,          # which room is up next
             "next_check_in": next_in,        # seconds until the next reading starts
-            "poll_interval_seconds": self.poll_interval,
+            "quiet": quiet,                  # true during quiet hours
+            "resume_time": resume,           # when quiet hours end (e.g. "6:00 AM")
             "updated_at": _now(),
         }
 
@@ -337,21 +353,52 @@ class Monitor:
 
     def run(self):
         print(
-            f"Monitor started: {len(self.rooms)} room(s), "
-            f"every {self.poll_interval}s, model={self.backend.model}",
+            f"Monitor started: {len(self.rooms)} room(s), model={self.backend.model}",
             flush=True,
         )
         while not self._stop.is_set():
-            with self._lock:
-                self.checking = True
+            now_local = self.sched.now()
+
+            # Quiet hours: don't check anything; tell the screen when we resume.
+            if self.sched.is_quiet(now_local):
+                with self._lock:
+                    self.checking = False
+                    self.checking_room = None
+                    self.next_room = None
+                    self.quiet = True
+                    self.resume_str = self.sched.quiet_resume_str(now_local)
+                self._stop.wait(20)  # re-evaluate periodically
+                continue
+
+            # Round-robin by due time: pick the room whose next check is soonest.
+            now = time.time()
+            due_room, due_at = None, None
             for room in self.rooms:
-                if self._stop.is_set():
-                    break
-                self.check_room(room)
+                interval = self.sched.room_interval(room.schedule, now_local)
+                at = room.last_ts + interval
+                if due_at is None or at < due_at:
+                    due_room, due_at = room, at
+
             with self._lock:
-                self.checking = False
-                self.next_check_at = time.time() + self.poll_interval
-            self._stop.wait(self.poll_interval)
+                self.quiet = False
+                self.resume_str = None
+
+            if due_room is not None and due_at <= now:
+                with self._lock:
+                    self.checking = True
+                    self.checking_room = due_room.name
+                self.check_room(due_room)
+                due_room.last_ts = time.time()
+                with self._lock:
+                    self.checking = False
+                    self.checking_room = None
+            else:
+                # Nothing due yet — advertise the next room and wait until it's due
+                # (capped, so window/interval changes are picked up promptly).
+                with self._lock:
+                    self.next_room = due_room.name if due_room else None
+                    self.next_check_at = due_at if due_at else now
+                self._stop.wait(min(max(due_at - now, 0.5), 15) if due_at else 15)
 
     def stop(self):
         self._stop.set()

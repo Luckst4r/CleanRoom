@@ -29,6 +29,10 @@ static String lastRender = "<init>";
 static uint16_t curBg = TFT_BLACK;   // current background colour, so the strip matches
 static int secsToNext = -1;          // seconds until the next reading (-1 = unknown)
 static bool checking = false;        // true while the detector is mid-reading
+static bool quiet = false;           // true during quiet hours (no checks)
+static char checkingRoom[28] = "";   // room being read right now
+static char nextRoom[28] = "";       // room up next
+static char resumeTime[12] = "";     // when quiet hours end, e.g. "6:00 AM"
 static unsigned long lastPollMs = 0; // when we last hit /status
 static unsigned long lastTickMs = 0; // when we last ticked the countdown
 
@@ -75,11 +79,20 @@ void drawCountdown() {
   int h = tft.height();
   tft.fillRect(0, h - 22, tft.width(), 22, curBg);  // clear strip in the current bg colour
   tft.setTextColor(TFT_WHITE, curBg);
-  if (checking) {
-    drawCentered("Checking now...", h - 13, 2);
+  char buf[44];
+  if (quiet) {
+    if (resumeTime[0]) snprintf(buf, sizeof(buf), "Sleeping until %s", resumeTime);
+    else               snprintf(buf, sizeof(buf), "Sleeping");
+    drawCentered(String(buf), h - 13, 2);
+  } else if (checking) {
+    if (checkingRoom[0]) snprintf(buf, sizeof(buf), "Checking %s...", checkingRoom);
+    else                 snprintf(buf, sizeof(buf), "Checking now...");
+    drawCentered(String(buf), h - 13, 2);
   } else if (secsToNext >= 0) {
-    char buf[28];
-    snprintf(buf, sizeof(buf), "Next reading in %d:%02d", secsToNext / 60, secsToNext % 60);
+    if (nextRoom[0])
+      snprintf(buf, sizeof(buf), "Next: %s %d:%02d", nextRoom, secsToNext / 60, secsToNext % 60);
+    else
+      snprintf(buf, sizeof(buf), "Next reading in %d:%02d", secsToNext / 60, secsToNext % 60);
     drawCentered(String(buf), h - 13, 2);
   }
 }
@@ -185,9 +198,13 @@ void poll() {
 
   bool allClean = doc["all_clean"] | false;
   JsonArray rooms = doc["rooms"].as<JsonArray>();
-  // Resync the countdown to the server's authoritative value on every poll.
+  // Resync the countdown + schedule state to the server on every poll.
   checking = doc["checking"] | false;
   secsToNext = doc["next_check_in"] | -1;
+  quiet = doc["quiet"] | false;
+  strlcpy(checkingRoom, doc["checking_room"] | "", sizeof(checkingRoom));
+  strlcpy(nextRoom, doc["next_room"] | "", sizeof(nextRoom));
+  strlcpy(resumeTime, doc["resume_time"] | "", sizeof(resumeTime));
 
   String sig = signatureOf(allClean, rooms);
   if (sig != lastRender) {  // only repaint the face when the verdict/items change

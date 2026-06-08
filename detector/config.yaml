@@ -1,7 +1,14 @@
 # CleanRoom detector configuration
 
-poll_interval_seconds: 120  # how often each room is checked (the screen counts down to this)
 debounce_readings: 2        # a room only flips state after this many identical readings in a row
+
+# When to check. All times are local to `timezone` (America/Chicago = Central time,
+# which tracks daylight/standard automatically). Rooms are checked round-robin by
+# their own cadence (see each room's `schedule`), and NOTHING is checked during
+# quiet_hours.
+schedule:
+  timezone: "America/Chicago"
+  quiet_hours: ["00:00-06:00"]   # midnight–6am: nothing is checked, ever
 
 vision:
   # Local, OpenAI-compatible vision endpoint. The default below is Ollama running
@@ -38,6 +45,14 @@ rooms:
     #   python check.py && cp last_frame.jpg reference_childs_bedroom.jpg
     reference_image: "reference_childs_bedroom.jpg"   # baseline photo (gitignored); capture during setup
 
+    # How often to check this room (local time). Peak = every 2 min during the kid's
+    # active hours; otherwise every 15 min. Quiet hours (top of file) override all.
+    schedule:
+      default_interval_seconds: 900    # 15 min outside the peak windows
+      peak_interval_seconds: 120       # 2 min during peak windows
+      weekday_windows: ["07:00-10:00", "15:00-20:00"]
+      weekend_windows: ["07:00-20:00"]
+
     # The tidiness checklist for THIS room. The model judges each item separately
     # and the room is untidy if ANY item fails. Each item has:
     #   label - a SHORT phrase shown on the screen as a bullet (keep under ~24 chars)
@@ -68,6 +83,10 @@ rooms:
     # tell the model to judge only what is visible. (The kitchen / bar stools will get
     # their own camera + room entry later.)
     reference_image: "reference_living_room.jpg"
+
+    # The living room changes slowly; check every 15 minutes (outside quiet hours).
+    schedule:
+      default_interval_seconds: 900
 
     checklist:
       - label: "Items on carpet"
