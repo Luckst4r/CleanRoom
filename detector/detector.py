@@ -137,7 +137,14 @@ def _parse_checks(content, checklist):
         passed = bool(c.get("pass", True))  # unseen/unreported -> assume ok
         note = str(c.get("note", "")).strip()
         label = item["label"]
-        checks.append({"id": i, "label": label, "rule": item["rule"], "pass": passed, "note": note})
+        checks.append({
+            "id": i,
+            "label": label,
+            "action": item.get("action", label),  # what to DO (shown on the screen)
+            "rule": item["rule"],
+            "pass": passed,
+            "note": note,
+        })
         if not passed:
             failed.append(label)
 
@@ -245,7 +252,8 @@ class RoomState:
             "name": self.name,
             "tidy": self.tidy,
             "reason": self.reason,
-            "items": self.items,
+            "items": self.items,                 # short labels of failed checks
+            "actions": [c["action"] for c in self.checks if not c.get("pass", True)],
             "checks": self.checks,
             "last_checked": self.last_checked,
             "last_error": self.last_error,
@@ -289,6 +297,7 @@ class Monitor:
         # Timing surfaced to the screen so it can show a live countdown.
         self.checking = False
         self.next_check_at = time.time()
+        self.backend_ok = True  # whether the last model call reached Ollama
 
     def _load_reference(self, path):
         """Pre-load a room's 'tidy' reference photo, if configured."""
@@ -308,6 +317,7 @@ class Monitor:
             rooms = [r.public() for r in self.rooms]
             checking = self.checking
             next_at = self.next_check_at
+            backend_ok = self.backend_ok
         untidy = [r["name"] for r in rooms if not r["tidy"]]
         next_in = 0 if checking else max(0, int(round(next_at - time.time())))
         return {
@@ -317,23 +327,37 @@ class Monitor:
             "checking": checking,            # true while a reading is in progress
             "next_check_in": next_in,        # seconds until the next reading starts
             "poll_interval_seconds": self.poll_interval,
+            "ollama_ok": backend_ok,         # whether the local model is reachable
             "updated_at": _now(),
         }
 
     def check_room(self, room):
+        # Camera/frame errors are kept separate from model errors so we can report
+        # Ollama reachability accurately (a dead camera doesn't mean Ollama is down).
         try:
             jpeg = grab_frame(room.source, self.max_width, self.jpeg_quality)
+        except Exception as exc:
+            with self._lock:
+                room.record_error(exc)
+            print(f"[{_now()}] {room.name}: CAMERA ERROR {exc}", flush=True)
+            return
+
+        try:
             tidy, reason, items, checks = self.backend.assess(
                 jpeg, room.checklist, room.reference_jpeg
             )
-            with self._lock:
-                room.record(tidy, reason, items, checks)
-            verdict = "TIDY" if tidy else "UNTIDY"
-            print(f"[{_now()}] {room.name}: {verdict} ({reason})", flush=True)
         except Exception as exc:  # keep prior state; never crash the loop
             with self._lock:
+                self.backend_ok = False
                 room.record_error(exc)
-            print(f"[{_now()}] {room.name}: ERROR {exc}", flush=True)
+            print(f"[{_now()}] {room.name}: MODEL ERROR {exc}", flush=True)
+            return
+
+        with self._lock:
+            self.backend_ok = True
+            room.record(tidy, reason, items, checks)
+        verdict = "TIDY" if tidy else "UNTIDY"
+        print(f"[{_now()}] {room.name}: {verdict} ({reason})", flush=True)
 
     def run(self):
         print(

@@ -40,23 +40,32 @@ rooms:
 
     # The tidiness checklist for THIS room. The model judges each item separately
     # and the room is untidy if ANY item fails. Each item has:
-    #   label - a SHORT phrase shown on the screen as a bullet (keep under ~24 chars)
-    #   rule  - the detailed condition the model checks (this is what tuning edits)
+    #   label  - SHORT name of the check (used in /status and the web view)
+    #   action - SHORT instruction shown as a bullet on the screen when it fails,
+    #            e.g. "Tuck in the desk chair" (keep under ~26 chars)
+    #   rule   - the detailed condition the model checks (this is what tuning edits)
     # Add/remove/reword freely while tuning with check.py.
     checklist:
       - label: "Items on floor"
+        action: "Pick up things off the floor"
         rule: "Nothing is left lying on the floor that does not belong there: no clothes, books, toys, bags, papers, or other items on the floor. Rugs and furniture are fine. Compared to the reference photo, fail if there are new items dropped on the floor."
       - label: "Bed not made"
+        action: "Make the bed"
         rule: "Compared to the reference photo, the bed has not been clearly torn apart or slept in — the cover/blanket is still roughly in place. Stuffed animals, toys, pillows, lumps, and a loosely-pulled cover are all normal and PASS. Fail ONLY if the bedding is obviously stripped, balled up, or dragged off the bed in a way the reference photo is not."
       - label: "Pillows on floor"
+        action: "Put the pillows back"
         rule: "There are no pillows on the floor; pillows are on the bed or the lounge chair."
       - label: "Books left out"
+        action: "Put the books away"
         rule: "There are no books left out on a table or desk; surfaces are clear of books."
       - label: "Art supplies out"
+        action: "Put away art supplies"
         rule: "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
       - label: "Desk chair out"
+        action: "Tuck in the desk chair"
         rule: "Compared to the reference photo, the desk chair is pushed in close to the desk, not pulled out into the room."
       - label: "Lounge chair messy"
+        action: "Tidy the lounge chair"
         rule: "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."
 
   - name: "Living Room"
@@ -73,16 +82,23 @@ rooms:
 
     checklist:
       - label: "Items on carpet"
+        action: "Clear items off the carpet"
         rule: "Compared to the reference photo, nothing new is left lying on the carpet or floor — no toys, clothes, cups, bags, papers, or other items. Fail only if items appear on the floor that are not present in the reference."
       - label: "Brown chairs moved"
+        action: "Reset the brown chairs"
         rule: "The two brown chairs are in the same positions and orientations as the reference photo. One brown chair may be partially obscured from the camera; judge only what is visible. Fail only if a visible brown chair is clearly moved or turned out of place versus the reference."
       - label: "Ottoman moved"
+        action: "Move the ottoman back"
         rule: "The white ottoman is in the same position as the reference photo. Fail only if it is clearly moved out of place versus the reference."
       - label: "Coffee table clutter"
+        action: "Clear the coffee table"
         rule: "The coffee table holds only the centerpiece shown in the reference photo. Fail if there are extra items on the coffee table (cups, dishes, remotes, toys, books, etc.) that are not present in the reference."
       - label: "Couch pillows messy"
+        action: "Arrange the couch pillows"
         rule: "The couch pillows are present and tidily arranged, roughly in the same orientation and positions as the reference photo. Their exact left-to-right color order does NOT matter. Fail only if pillows are clearly knocked over, squashed flat, piled up, dumped on the seat or floor, or otherwise obviously messy compared to the reference."
       - label: "Throw blanket"
+        action: "Re-drape the throw blanket"
         rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
       - label: "Chair pillows gone"
+        action: "Put pillows on the chairs"
         rule: "There is one white pillow on each brown chair, as in the reference photo. A brown chair may be partially visible; judge only what is visible. Fail only if a white pillow that is present in the reference is clearly missing from a brown chair."
