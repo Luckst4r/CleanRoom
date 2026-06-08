@@ -30,9 +30,23 @@ rooms:
     # For local testing without a camera, set source to an image file path, e.g.:
     #   source: "samples/childs_bedroom.jpg"
     source: "rtsp://USERNAME:PASSWORD@192.168.1.50:554/stream1"
-    # The criteria for THIS room. Be specific — "tidy" means different things per room.
-    criteria: >
-      The room is UNTIDY if ANY of the following are visible:
-      a book on the floor, a book left out on a table or other surface,
-      or clothes on the floor.
-      If none of those are present, the room is TIDY.
+
+    # OPTIONAL but recommended: a photo of THIS room when it is tidy. The model
+    # compares against it to judge relative items (chair pushed in, lounge chair
+    # facing the right way, pillows arranged). Capture it during setup like this,
+    # with the room tidy, then point this at the saved file:
+    #   python check.py && cp last_frame.jpg reference_childs_bedroom.jpg
+    reference_image: ""   # e.g. "reference_childs_bedroom.jpg"
+
+    # The tidiness checklist for THIS room. The model judges each item separately
+    # and the room is untidy if ANY item fails. Phrase each as a clear, observable
+    # condition that should be TRUE when tidy. Add/remove/reword freely while tuning
+    # with check.py — wording is the main accuracy lever for a local model.
+    checklist:
+      - "There are no clothes on the floor; the floor is clear of clothing."
+      - "The bed is made: the blanket/duvet is pulled up and flat, not bunched or thrown back."
+      - "There are no pillows on the floor; pillows are on the bed or the lounge chair."
+      - "There are no books left out on a table or desk; surfaces are clear of books."
+      - "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
+      - "The desk chair is pushed in close to the desk, not pulled out into the room."
+      - "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."

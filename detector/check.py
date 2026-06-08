@@ -42,19 +42,31 @@ def main():
     room = cfg["rooms"][args.room]
     source = args.source or room["source"]
     v = cfg["vision"]
+    max_w = v.get("max_image_width", 1024)
+    quality = v.get("jpeg_quality", 80)
 
     print(f"Room:   {room['name']}")
     print(f"Source: {_redact(source)}")
     print(f"Model:  {v['model']}  @ {v['base_url']}")
-    print("-" * 50)
+    print("-" * 60)
 
     # 1) Capture
     print("Grabbing a frame...")
     t0 = time.time()
-    jpeg = grab_frame(source, v.get("max_image_width", 1024), v.get("jpeg_quality", 80))
+    jpeg = grab_frame(source, max_w, quality)
     FRAME_OUT.write_bytes(jpeg)
     print(f"  saved {len(jpeg)//1024} KB to {FRAME_OUT}  ({time.time()-t0:.1f}s)")
     print("  -> open last_frame.jpg to confirm the camera is aimed well.")
+
+    # Optional reference photo (room when tidy) for relative judgments.
+    reference = None
+    ref_path = room.get("reference_image")
+    if ref_path:
+        try:
+            reference = grab_frame(ref_path, max_w, quality)
+            print(f"  using reference image: {ref_path}")
+        except Exception as exc:
+            print(f"  WARNING: could not load reference image {ref_path}: {exc}")
 
     # 2) Assess
     print("\nAsking the vision model...")
@@ -66,14 +78,19 @@ def main():
         force_json=v.get("force_json", True),
     )
     t0 = time.time()
-    tidy, reason, items = backend.assess(jpeg, room["criteria"])
+    tidy, reason, items, checks = backend.assess(jpeg, room["checklist"], reference)
     dt = time.time() - t0
 
-    print("-" * 50)
+    print("-" * 60)
+    for c in checks:
+        mark = "✅" if c["pass"] else "❌"
+        print(f"  {mark}  {c['item']}")
+        if c["note"]:
+            print(f"       └ {c['note']}")
+    print("-" * 60)
     print(f"VERDICT: {'TIDY ✅' if tidy else 'UNTIDY ❌'}   ({dt:.1f}s)")
-    print(f"reason:  {reason}")
-    if items:
-        print("items:   " + ", ".join(items))
+    if not tidy:
+        print(f"failed:  {reason}")
 
 
 def _redact(s):
