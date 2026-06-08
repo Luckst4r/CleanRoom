@@ -1,6 +1,6 @@
 # CleanRoom detector configuration
 
-poll_interval_seconds: 60   # how often each room is checked (tidiness changes slowly)
+poll_interval_seconds: 120  # how often each room is checked (the screen counts down to this)
 debounce_readings: 2        # a room only flips state after this many identical readings in a row
 
 vision:

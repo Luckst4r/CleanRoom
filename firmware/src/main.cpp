@@ -25,6 +25,13 @@ static const uint16_t RED   = 0xC000;  // strong red
 // Remember the last thing drawn so we only repaint on change (avoids flicker).
 static String lastRender = "<init>";
 
+// Live countdown + state shown in the bottom strip.
+static uint16_t curBg = TFT_BLACK;   // current background colour, so the strip matches
+static int secsToNext = -1;          // seconds until the next reading (-1 = unknown)
+static bool checking = false;        // true while the detector is mid-reading
+static unsigned long lastPollMs = 0; // when we last hit /status
+static unsigned long lastTickMs = 0; // when we last ticked the countdown
+
 void connectWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -43,38 +50,64 @@ void drawCentered(const String &text, int y, uint8_t font, uint8_t datum = MC_DA
 
 void drawSmiley() {
   int cx = tft.width() / 2;
-  int cy = tft.height() / 2;
-  int r = 55;
+  int cy = tft.height() / 2 - 12;   // shifted up to leave room for the countdown strip
+  int r = 52;
   tft.fillCircle(cx, cy, r, TFT_YELLOW);
   tft.drawCircle(cx, cy, r, TFT_BLACK);
+  tft.drawCircle(cx, cy, r - 1, TFT_BLACK);
   // eyes
-  tft.fillCircle(cx - 20, cy - 18, 7, TFT_BLACK);
-  tft.fillCircle(cx + 20, cy - 18, 7, TFT_BLACK);
-  // smile: a thick downward arc
-  tft.drawArc(cx, cy, 34, 26, 35, 145, TFT_BLACK, TFT_YELLOW, true);
-}
-
-void renderClean() {
-  tft.fillScreen(GREEN);
-  tft.setTextColor(TFT_WHITE, GREEN);
-  drawSmiley();
-  drawCentered("All clean", tft.height() - 22, 4);
-}
-
-void renderUntidy(JsonArray rooms) {
-  tft.fillScreen(RED);
-  tft.setTextColor(TFT_WHITE, RED);
-  drawCentered("UNTIDY", 22, 4);
-
-  int y = 64;
-  for (JsonVariant room : rooms) {
-    drawCentered(room.as<const char *>(), y, 4);
-    y += 32;
-    if (y > tft.height() - 16) break;  // don't overflow the panel
+  tft.fillCircle(cx - 18, cy - 14, 6, TFT_BLACK);
+  tft.fillCircle(cx + 18, cy - 14, 6, TFT_BLACK);
+  // smile: bottom arc plotted from our own math (deg 210..330, 270 = straight down),
+  // drawn as overlapping dots so the mouth is always upright and the right way up.
+  int mr = 28;
+  for (int deg = 210; deg <= 330; deg += 4) {
+    float a = deg * 0.01745329f;  // degrees -> radians
+    int mx = cx + (int)(mr * cosf(a));
+    int my = cy - (int)(mr * sinf(a));
+    tft.fillCircle(mx, my, 3, TFT_BLACK);
   }
 }
 
+// The bottom strip: redrawn every second to tick the countdown without disturbing
+// the face above it.
+void drawCountdown() {
+  int h = tft.height();
+  tft.fillRect(0, h - 22, tft.width(), 22, curBg);  // clear strip in the current bg colour
+  tft.setTextColor(TFT_WHITE, curBg);
+  if (checking) {
+    drawCentered("Checking now...", h - 13, 2);
+  } else if (secsToNext >= 0) {
+    char buf[28];
+    snprintf(buf, sizeof(buf), "Next reading in %d:%02d", secsToNext / 60, secsToNext % 60);
+    drawCentered(String(buf), h - 13, 2);
+  }
+}
+
+void renderClean() {
+  curBg = GREEN;
+  tft.fillScreen(GREEN);
+  drawSmiley();
+  drawCountdown();
+}
+
+void renderUntidy(JsonArray rooms) {
+  curBg = RED;
+  tft.fillScreen(RED);
+  tft.setTextColor(TFT_WHITE, RED);
+  drawCentered("UNTIDY", 20, 4);
+
+  int y = 56;
+  for (JsonVariant room : rooms) {
+    drawCentered(room.as<const char *>(), y, 4);
+    y += 30;
+    if (y > tft.height() - 30) break;  // leave room for the countdown strip
+  }
+  drawCountdown();
+}
+
 void renderError(const String &msg) {
+  curBg = TFT_BLACK;
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_ORANGE, TFT_BLACK);
   drawCentered("No data", tft.height() / 2 - 16, 4);
@@ -106,6 +139,8 @@ void poll() {
 
   if (code != 200) {
     String msg = "HTTP " + String(code);
+    checking = false;
+    secsToNext = -1;
     if (lastRender != "err:" + msg) {
       renderError(msg);
       lastRender = "err:" + msg;
@@ -120,6 +155,8 @@ void poll() {
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, payload);
   if (err) {
+    checking = false;
+    secsToNext = -1;
     if (lastRender != "err:json") {
       renderError("bad JSON");
       lastRender = "err:json";
@@ -129,15 +166,18 @@ void poll() {
 
   bool allClean = doc["all_clean"] | false;
   JsonArray untidy = doc["untidy_rooms"].as<JsonArray>();
+  // Resync the countdown to the server's authoritative value on every poll.
+  checking = doc["checking"] | false;
+  secsToNext = doc["next_check_in"] | -1;
 
   String sig = signatureOf(allClean, untidy);
-  if (sig == lastRender) return;  // nothing changed; leave the screen as-is
-  lastRender = sig;
-
-  if (allClean) {
-    renderClean();
-  } else {
-    renderUntidy(untidy);
+  if (sig != lastRender) {  // only repaint the face when the verdict changes
+    lastRender = sig;
+    if (allClean) {
+      renderClean();
+    } else {
+      renderUntidy(untidy);
+    }
   }
 }
 
@@ -158,6 +198,20 @@ void setup() {
 }
 
 void loop() {
-  poll();
-  delay(POLL_INTERVAL_MS);
+  unsigned long now = millis();
+
+  // Hit /status every POLL_INTERVAL_MS...
+  if (lastPollMs == 0 || now - lastPollMs >= POLL_INTERVAL_MS) {
+    poll();
+    lastPollMs = now;
+  }
+
+  // ...but tick the countdown every second so it visibly counts down between polls.
+  if (now - lastTickMs >= 1000) {
+    lastTickMs = now;
+    if (!checking && secsToNext > 0) secsToNext--;
+    drawCountdown();
+  }
+
+  delay(40);
 }

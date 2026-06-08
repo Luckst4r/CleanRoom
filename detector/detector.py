@@ -282,6 +282,9 @@ class Monitor:
         ]
         self._lock = threading.Lock()
         self._stop = threading.Event()
+        # Timing surfaced to the screen so it can show a live countdown.
+        self.checking = False
+        self.next_check_at = time.time()
 
     def _load_reference(self, path):
         """Pre-load a room's 'tidy' reference photo, if configured."""
@@ -299,11 +302,17 @@ class Monitor:
         """Thread-safe view of current state for the HTTP API."""
         with self._lock:
             rooms = [r.public() for r in self.rooms]
+            checking = self.checking
+            next_at = self.next_check_at
         untidy = [r["name"] for r in rooms if not r["tidy"]]
+        next_in = 0 if checking else max(0, int(round(next_at - time.time())))
         return {
             "all_clean": len(untidy) == 0,
             "untidy_rooms": untidy,
             "rooms": rooms,
+            "checking": checking,            # true while a reading is in progress
+            "next_check_in": next_in,        # seconds until the next reading starts
+            "poll_interval_seconds": self.poll_interval,
             "updated_at": _now(),
         }
 
@@ -329,10 +338,15 @@ class Monitor:
             flush=True,
         )
         while not self._stop.is_set():
+            with self._lock:
+                self.checking = True
             for room in self.rooms:
                 if self._stop.is_set():
                     break
                 self.check_room(room)
+            with self._lock:
+                self.checking = False
+                self.next_check_at = time.time() + self.poll_interval
             self._stop.wait(self.poll_interval)
 
     def stop(self):

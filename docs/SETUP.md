@@ -142,6 +142,9 @@ seconds.
       "last_error": null
     }
   ],
+  "checking": false,            // true while a reading is in progress
+  "next_check_in": 90,          // seconds until the next reading (screen counts this down)
+  "poll_interval_seconds": 120,
   "updated_at": "2026-06-08T10:00:05"
 }
 ```
