@@ -14,6 +14,7 @@ import base64
 import collections
 import datetime
 import json
+import os
 import re
 import threading
 import time
@@ -140,8 +141,16 @@ def grab_frame(source, max_width, jpeg_quality):
     """Grab one frame from `source` and return JPEG bytes.
 
     `source` may be an RTSP/HTTP stream URL or a local image file path (handy for
-    testing without a camera). Raises on failure.
+    testing without a camera). `${VAR}` references are expanded from the environment
+    (e.g. the default config reads the camera URL from CLEANROOM_RTSP_URL so the
+    password never lives in a git-tracked file). Raises on failure.
     """
+    source = os.path.expandvars(source)
+    if not source or "${" in source:
+        raise RuntimeError(
+            f"camera source is not set/expanded: {source!r} — "
+            "set CLEANROOM_RTSP_URL in detector/.env"
+        )
     if source.startswith(("rtsp://", "http://", "https://")):
         frame = _grab_stream_frame(source)
     else:

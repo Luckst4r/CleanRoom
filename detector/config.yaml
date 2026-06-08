@@ -23,13 +23,13 @@ server:
 
 rooms:
   - name: "Child's Bedroom"
-    # RTSP from the Tapo cam. Create a "Camera Account" in the Tapo app
-    # (Advanced Settings -> Camera Account) and use those credentials here.
-    # Use a static DHCP lease for the camera so the IP doesn't change.
-    #   stream1 = full 2K, stream2 = lower res (either works; stream2 is lighter)
-    # For local testing without a camera, set source to an image file path, e.g.:
-    #   source: "samples/childs_bedroom.jpg"
-    source: "rtsp://USERNAME:PASSWORD@192.168.1.50:554/stream1"
+    # The camera's RTSP URL is kept OUT of git: set it in detector/.env as
+    #   CLEANROOM_RTSP_URL=rtsp://USER:PASS@CAM_IP:554/stream1
+    # (create the Tapo "Camera Account" under Advanced Settings -> Camera Account,
+    # give the camera a static DHCP lease; stream1 = full 2K, stream2 = lower res).
+    # For local testing without a camera you can instead hard-code a file path here,
+    # e.g.  source: "samples/childs_bedroom.jpg"
+    source: "${CLEANROOM_RTSP_URL}"
 
     # OPTIONAL but recommended: a photo of THIS room when it is tidy. The model
     # compares against it to judge relative items (chair pushed in, lounge chair

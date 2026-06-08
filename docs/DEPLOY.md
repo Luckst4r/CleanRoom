@@ -122,16 +122,18 @@ pip install -r requirements.txt
 ✅ Installs without error. **If `opencv` fails to import later:** ensure it's
 `opencv-python-headless` from requirements (already pinned).
 
-**3.2** Point the config at the real camera. Edit `detector/config.yaml`:
-- set `rooms[0].source` to `rtsp://CAM_USER:CAM_PASS@CAM_IP:554/stream1`
-- leave `vision.base_url`/`model` as the Ollama defaults.
+**3.2** Put the camera URL in `detector/.env` (keeps the password out of git;
+`config.yaml` already reads `${CLEANROOM_RTSP_URL}` for the room source, so nothing
+version-controlled changes):
 
-(I'll make this edit on the branch and have the user `git pull`, OR walk them through
-editing it locally — prefer the branch route so it's version-controlled. Credentials
-in the URL are local-only and the file is on their machine; that's acceptable for a
-home LAN, but do **not** commit real credentials — keep the committed value a
-placeholder and have the user fill it in locally, which `.gitignore` does not cover,
-so instead consider an env-substituted source if the user prefers.)
+```bash
+cd ~/CleanRoom/detector
+cp .env.example .env        # if you haven't already
+# edit .env and set:
+#   CLEANROOM_RTSP_URL=rtsp://CAM_USER:CAM_PASS@CAM_IP:554/stream1
+```
+
+Leave `vision.base_url`/`model` in `config.yaml` as the Ollama defaults.
 
 **3.3** Capture the reference photo, then run the one-shot check. Detection uses a
 per-item **checklist** (`rooms[0].checklist` in `config.yaml`), and several items
