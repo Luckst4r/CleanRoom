@@ -36,7 +36,7 @@ rooms:
     # facing the right way, pillows arranged). Capture it during setup like this,
     # with the room tidy, then point this at the saved file:
     #   python check.py && cp last_frame.jpg reference_childs_bedroom.jpg
-    reference_image: ""   # e.g. "reference_childs_bedroom.jpg"
+    reference_image: "reference_childs_bedroom.jpg"   # baseline photo (gitignored); capture during setup
 
     # The tidiness checklist for THIS room. The model judges each item separately
     # and the room is untidy if ANY item fails. Phrase each as a clear, observable
