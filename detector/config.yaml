@@ -11,7 +11,7 @@ vision:
   base_url: "http://localhost:11434/v1"
   model: "qwen2.5vl:7b"   # a vision model that fits in 16GB; alternatives: minicpm-v, llama3.2-vision
   force_json: true        # ask the server to return strict JSON (Ollama supports this)
-  max_image_width: 1536   # frames are downscaled to this width before analysis (more px = finer detail)
+  max_image_width: 1024   # frames are downscaled to this width before analysis
   jpeg_quality: 80
   timeout_seconds: 120    # local models can be slower than cloud; give them room
   # api_key: only needed for cloud backends. Leave unset for local Ollama. If a
@@ -80,8 +80,8 @@ rooms:
         rule: "The white ottoman is in the same position as the reference photo. Fail only if it is clearly moved out of place versus the reference."
       - label: "Coffee table clutter"
         rule: "The coffee table holds only the centerpiece shown in the reference photo. Fail if there are extra items on the coffee table (cups, dishes, remotes, toys, books, etc.) that are not present in the reference."
-      - label: "Couch pillow order"
-        rule: "Check the couch pillow COLOR ORDER carefully. First list the couch pillow colors from LEFT to RIGHT in the CURRENT photo. Then list them from left to right in the REFERENCE photo. In your note, write BOTH sequences explicitly (for example, 'current: blue, white, green; reference: blue, green, white'). PASS only if the two color sequences are identical. Fail if the order differs, or if a pillow is missing, added, or knocked over."
+      - label: "Couch pillows messy"
+        rule: "The couch pillows are present and tidily arranged, roughly in the same orientation and positions as the reference photo. Their exact left-to-right color order does NOT matter. Fail only if pillows are clearly knocked over, squashed flat, piled up, dumped on the seat or floor, or otherwise obviously messy compared to the reference."
       - label: "Throw blanket"
         rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
       - label: "Chair pillows gone"
