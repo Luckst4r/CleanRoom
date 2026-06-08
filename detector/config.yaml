@@ -58,3 +58,33 @@ rooms:
         rule: "Compared to the reference photo, the desk chair is pushed in close to the desk, not pulled out into the room."
       - label: "Lounge chair messy"
         rule: "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."
+
+  - name: "Living Room"
+    # RTSP URL kept out of git — set in detector/.env as:
+    #   CLEANROOM_RTSP_URL_LIVINGROOM=rtsp://USER:PASS@CAM_IP:554/stream1
+    source: "${CLEANROOM_RTSP_URL_LIVINGROOM}"
+
+    # This room is almost entirely reference-relative: most rules mean "the same as
+    # the reference photo." Capture the reference with the room exactly how it should
+    # look. NOTE: one brown chair is partially obscured from the camera, and the camera
+    # also sees into the kitchen (bar stools) — the rules tell the model to judge only
+    # what is visible.
+    reference_image: "reference_living_room.jpg"
+
+    checklist:
+      - label: "Items on carpet"
+        rule: "Compared to the reference photo, nothing new is left lying on the carpet or floor — no toys, clothes, cups, bags, papers, or other items. Fail only if items appear on the floor that are not present in the reference."
+      - label: "Brown chairs moved"
+        rule: "The two brown chairs are in the same positions and orientations as the reference photo. One brown chair may be partially obscured from the camera; judge only what is visible. Fail only if a visible brown chair is clearly moved or turned out of place versus the reference."
+      - label: "Ottoman moved"
+        rule: "The white ottoman is in the same position as the reference photo. Fail only if it is clearly moved out of place versus the reference."
+      - label: "Coffee table clutter"
+        rule: "The coffee table holds only the centerpiece shown in the reference photo. Fail if there are extra items on the coffee table (cups, dishes, remotes, toys, books, etc.) that are not present in the reference."
+      - label: "Couch pillow order"
+        rule: "The pillows on the couch match the reference photo in arrangement and in their left-to-right COLOR ORDER. Fail if pillows are missing, added, knocked over, or their color sequence differs from the reference."
+      - label: "Throw blanket"
+        rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
+      - label: "Chair pillows gone"
+        rule: "There is one white pillow on each brown chair, as in the reference photo. A brown chair may be partially visible; judge only what is visible. Fail only if a white pillow that is present in the reference is clearly missing from a brown chair."
+      - label: "Bar stools out"
+        rule: "The bar stools visible in the kitchen area are tucked under the kitchen island, as in the reference photo. Fail only if a stool is clearly pulled out from under the island versus the reference."
