@@ -132,11 +132,11 @@ seconds.
     {
       "name": "Child's Bedroom",
       "tidy": false,
-      "reason": "The bed is made ...; There are no books left out ...",
-      "items": ["The bed is made ...", "There are no books left out ..."],
+      "reason": "Items on floor; Books left out",
+      "items": ["Items on floor", "Books left out"],
       "checks": [
-        {"id": 1, "item": "There are no clothes on the floor ...", "pass": true, "note": "floor is clear"},
-        {"id": 2, "item": "The bed is made ...", "pass": false, "note": "blanket is bunched up"}
+        {"id": 1, "label": "Items on floor", "rule": "Nothing is left lying on the floor ...", "pass": false, "note": "a book is on the floor"},
+        {"id": 2, "label": "Bed not made", "rule": "Compared to the reference photo ...", "pass": true, "note": "bedding roughly in place"}
       ],
       "last_checked": "2026-06-08T10:00:00",
       "last_error": null

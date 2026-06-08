@@ -57,7 +57,7 @@ def create_app(monitor: Monitor) -> Flask:
             for c in r["checks"]:
                 mark = "✅" if c["pass"] else "❌"
                 note = f" — {c['note']}" if c["note"] else ""
-                out.append(f"{mark} {c['item']}{note}")
+                out.append(f"{mark} {c['label']}{note}")
             return "<br>".join(out)
 
         rows = "".join(

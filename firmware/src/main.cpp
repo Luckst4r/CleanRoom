@@ -91,17 +91,29 @@ void renderClean() {
   drawCountdown();
 }
 
+// Render each untidy room as a name header followed by a short bulleted list of
+// what needs picking up (capped at 3 bullets so it fits the panel).
 void renderUntidy(JsonArray rooms) {
   curBg = RED;
   tft.fillScreen(RED);
   tft.setTextColor(TFT_WHITE, RED);
-  drawCentered("UNTIDY", 20, 4);
 
-  int y = 56;
-  for (JsonVariant room : rooms) {
-    drawCentered(room.as<const char *>(), y, 4);
-    y += 30;
-    if (y > tft.height() - 30) break;  // leave room for the countdown strip
+  int y = 6;
+  int bullets = 0;
+  for (JsonObject room : rooms) {
+    if (room["tidy"] | true) continue;  // only the untidy ones
+    drawCentered(room["name"].as<const char *>(), y + 12, 4);
+    y += 34;
+    for (JsonVariant item : room["items"].as<JsonArray>()) {
+      if (bullets >= 3) break;
+      int by = y + 8;
+      tft.fillCircle(12, by, 2, TFT_WHITE);  // bullet dot
+      tft.setTextDatum(TL_DATUM);
+      tft.drawString(item.as<const char *>(), 22, by - 7, 2);
+      y += 22;
+      bullets++;
+    }
+    if (bullets >= 3) break;
   }
   drawCountdown();
 }
@@ -115,13 +127,20 @@ void renderError(const String &msg) {
   drawCentered(msg, tft.height() / 2 + 14, 2);
 }
 
-// Build a short signature of the current state so we can skip redundant repaints.
+// Build a short signature of the current state so we only repaint the face when
+// the verdict OR the specific untidy items change.
 String signatureOf(bool allClean, JsonArray rooms) {
   if (allClean) return "clean";
   String s = "untidy:";
-  for (JsonVariant r : rooms) {
-    s += r.as<const char *>();
-    s += "|";
+  for (JsonObject r : rooms) {
+    if (r["tidy"] | true) continue;
+    s += r["name"].as<const char *>();
+    s += "[";
+    for (JsonVariant item : r["items"].as<JsonArray>()) {
+      s += item.as<const char *>();
+      s += ",";
+    }
+    s += "]";
   }
   return s;
 }
@@ -165,18 +184,18 @@ void poll() {
   }
 
   bool allClean = doc["all_clean"] | false;
-  JsonArray untidy = doc["untidy_rooms"].as<JsonArray>();
+  JsonArray rooms = doc["rooms"].as<JsonArray>();
   // Resync the countdown to the server's authoritative value on every poll.
   checking = doc["checking"] | false;
   secsToNext = doc["next_check_in"] | -1;
 
-  String sig = signatureOf(allClean, untidy);
-  if (sig != lastRender) {  // only repaint the face when the verdict changes
+  String sig = signatureOf(allClean, rooms);
+  if (sig != lastRender) {  // only repaint the face when the verdict/items change
     lastRender = sig;
     if (allClean) {
       renderClean();
     } else {
-      renderUntidy(untidy);
+      renderUntidy(rooms);
     }
   }
 }

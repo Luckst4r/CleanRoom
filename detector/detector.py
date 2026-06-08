@@ -73,10 +73,13 @@ class VisionBackend:
     def assess(self, jpeg_bytes, checklist, reference_jpeg=None):
         """Evaluate a room against a checklist.
 
-        Returns (tidy: bool, reason: str, failed_items: list[str], checks: list[dict]).
-        `checks` is the per-item detail: {id, item, pass, note}. Raises on failure.
+        `checklist` is a list of {"label": short, "rule": detailed} dicts. The model
+        is shown the detailed rules; the short labels are what we surface (screen,
+        failed-item lists). Returns
+        (tidy: bool, reason: str, failed_labels: list[str], checks: list[dict]).
+        `checks` is the per-item detail: {id, label, rule, pass, note}. Raises on failure.
         """
-        numbered = "\n".join(f"{i}. {item}" for i, item in enumerate(checklist, 1))
+        numbered = "\n".join(f"{i}. {it['rule']}" for i, it in enumerate(checklist, 1))
         content = [{"type": "text", "text": "Checklist:\n" + numbered}]
         if reference_jpeg is not None:
             content.append({"type": "text", "text": "REFERENCE photo (room when tidy):"})
@@ -133,9 +136,10 @@ def _parse_checks(content, checklist):
         c = reported.get(i, {})
         passed = bool(c.get("pass", True))  # unseen/unreported -> assume ok
         note = str(c.get("note", "")).strip()
-        checks.append({"id": i, "item": item, "pass": passed, "note": note})
+        label = item["label"]
+        checks.append({"id": i, "label": label, "rule": item["rule"], "pass": passed, "note": note})
         if not passed:
-            failed.append(item)
+            failed.append(label)
 
     tidy = len(failed) == 0
     reason = "all checks passed" if tidy else "; ".join(failed)

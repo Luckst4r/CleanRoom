@@ -39,14 +39,22 @@ rooms:
     reference_image: "reference_childs_bedroom.jpg"   # baseline photo (gitignored); capture during setup
 
     # The tidiness checklist for THIS room. The model judges each item separately
-    # and the room is untidy if ANY item fails. Phrase each as a clear, observable
-    # condition that should be TRUE when tidy. Add/remove/reword freely while tuning
-    # with check.py — wording is the main accuracy lever for a local model.
+    # and the room is untidy if ANY item fails. Each item has:
+    #   label - a SHORT phrase shown on the screen as a bullet (keep under ~24 chars)
+    #   rule  - the detailed condition the model checks (this is what tuning edits)
+    # Add/remove/reword freely while tuning with check.py.
     checklist:
-      - "Nothing is left lying on the floor that does not belong there: no clothes, books, toys, bags, papers, or other items on the floor. Rugs and furniture are fine. Compared to the reference photo, fail if there are new items dropped on the floor."
-      - "Compared to the reference photo, the bed has not been clearly torn apart or slept in — the cover/blanket is still roughly in place. Stuffed animals, toys, pillows, lumps, and a loosely-pulled cover are all normal and PASS. Fail ONLY if the bedding is obviously stripped, balled up, or dragged off the bed in a way the reference photo is not."
-      - "There are no pillows on the floor; pillows are on the bed or the lounge chair."
-      - "There are no books left out on a table or desk; surfaces are clear of books."
-      - "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
-      - "The desk chair is pushed in close to the desk, not pulled out into the room."
-      - "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."
+      - label: "Items on floor"
+        rule: "Nothing is left lying on the floor that does not belong there: no clothes, books, toys, bags, papers, or other items on the floor. Rugs and furniture are fine. Compared to the reference photo, fail if there are new items dropped on the floor."
+      - label: "Bed not made"
+        rule: "Compared to the reference photo, the bed has not been clearly torn apart or slept in — the cover/blanket is still roughly in place. Stuffed animals, toys, pillows, lumps, and a loosely-pulled cover are all normal and PASS. Fail ONLY if the bedding is obviously stripped, balled up, or dragged off the bed in a way the reference photo is not."
+      - label: "Pillows on floor"
+        rule: "There are no pillows on the floor; pillows are on the bed or the lounge chair."
+      - label: "Books left out"
+        rule: "There are no books left out on a table or desk; surfaces are clear of books."
+      - label: "Art supplies out"
+        rule: "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
+      - label: "Desk chair out"
+        rule: "Compared to the reference photo, the desk chair is pushed in close to the desk, not pulled out into the room."
+      - label: "Lounge chair messy"
+        rule: "The lounge chair faces the correct direction and its pillows are arranged tidily, matching the reference photo."

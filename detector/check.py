@@ -84,7 +84,7 @@ def main():
     print("-" * 60)
     for c in checks:
         mark = "✅" if c["pass"] else "❌"
-        print(f"  {mark}  {c['item']}")
+        print(f"  {mark}  {c['label']}")
         if c["note"]:
             print(f"       └ {c['note']}")
     print("-" * 60)
