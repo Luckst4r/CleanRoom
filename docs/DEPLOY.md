@@ -249,16 +249,21 @@ output tells you which line to reword.
 
 Make the detector survive logout/reboot with a `launchd` agent.
 
-**6.1** I'll generate `~/Library/LaunchAgents/com.cleanroom.detector.plist` for the
-user that runs `~/CleanRoom/detector/.venv/bin/python ~/CleanRoom/detector/app.py`,
-with `KeepAlive` true and logs to `~/CleanRoom/detector.log`. Then:
+**6.1** Stop the manually-run `python app.py` (Ctrl-C) so it doesn't fight the
+service for port 8080, then run the installer:
 
 ```bash
-launchctl load -w ~/Library/LaunchAgents/com.cleanroom.detector.plist
+cd ~/CleanRoom
+bash scripts/install-service.sh
 ```
 
+It writes `~/Library/LaunchAgents/com.cleanroom.detector.plist` (runs the venv
+Python on `app.py`, `KeepAlive` true, logs to `~/CleanRoom/detector.log`) and loads
+it.
+
 ✅ `curl http://localhost:8080/status` works after a reboot, with no terminal open.
-Also confirm the Ollama app is set to launch at login (so the model server is up).
+Also confirm the **Ollama app is set to launch at login** (System Settings →
+General → Login Items) so the model server is up for the detector to call.
 
 **Done.** The system is deployed: camera → local model on the Mac → screen, all on
 the LAN.
