@@ -50,16 +50,27 @@ def create_app(monitor: Monitor) -> Flask:
         else:
             rooms = "".join(f"<li>{r}</li>" for r in snap["untidy_rooms"])
             body = f"<h1>UNTIDY</h1><ul>{rooms}</ul>"
+        def checks_html(r):
+            if not r.get("checks"):
+                return r["reason"]
+            out = []
+            for c in r["checks"]:
+                mark = "✅" if c["pass"] else "❌"
+                note = f" — {c['note']}" if c["note"] else ""
+                out.append(f"{mark} {c['item']}{note}")
+            return "<br>".join(out)
+
         rows = "".join(
             f"<tr><td>{r['name']}</td><td>{'tidy' if r['tidy'] else 'UNTIDY'}</td>"
-            f"<td>{r['reason']}</td><td>{r['last_error'] or ''}</td></tr>"
+            f"<td style='text-align:left'>{checks_html(r)}</td>"
+            f"<td>{r['last_error'] or ''}</td></tr>"
             for r in snap["rooms"]
         )
         html = f"""<!doctype html><meta http-equiv="refresh" content="5">
 <body style="background:{color};color:#fff;font-family:sans-serif;text-align:center">
 {body}
 <table style="margin:2em auto;color:#fff;border-collapse:collapse" border="1" cellpadding="6">
-<tr><th>room</th><th>state</th><th>reason</th><th>error</th></tr>{rows}</table>
+<tr><th>room</th><th>state</th><th>checks</th><th>error</th></tr>{rows}</table>
 </body>"""
         return Response(html, mimetype="text/html")
 

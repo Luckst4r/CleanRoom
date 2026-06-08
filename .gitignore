@@ -12,6 +12,7 @@ venv/
 .pio/
 .vscode/
 
-# local test images / scratch captures
+# local test images / scratch captures / reference photos (contain the actual room)
 detector/samples/
 detector/last_frame.jpg
+detector/reference_*.jpg

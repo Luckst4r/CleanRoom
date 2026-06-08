@@ -68,7 +68,15 @@ confirm the verdicts make sense, then point it back at the camera.
 
 ### Tuning
 
-- **What counts as untidy** — edit `rooms[0].criteria` in `config.yaml`.
+Detection uses a per-item **checklist** per room: the model judges each item
+separately and the room is untidy if any item fails. `python check.py` prints a
+✅/❌ line per item — that's the fastest way to tune.
+
+- **What counts as untidy** — edit the `rooms[0].checklist` items in `config.yaml`
+  (one clear, observable condition per line that should be TRUE when tidy).
+- **Relative items** (furniture position/orientation, arrangement) — set
+  `rooms[0].reference_image` to a photo of the room when tidy; the model compares
+  against it. Capture one with `python check.py && cp last_frame.jpg reference.jpg`.
 - **How fast it reacts** — `poll_interval_seconds` (default 60) and
   `debounce_readings` (default 2: two identical readings in a row before the
   state flips, which prevents flicker).
@@ -124,8 +132,12 @@ seconds.
     {
       "name": "Child's Bedroom",
       "tidy": false,
-      "reason": "a book is on the floor",
-      "items": ["book on floor"],
+      "reason": "The bed is made ...; There are no books left out ...",
+      "items": ["The bed is made ...", "There are no books left out ..."],
+      "checks": [
+        {"id": 1, "item": "There are no clothes on the floor ...", "pass": true, "note": "floor is clear"},
+        {"id": 2, "item": "The bed is made ...", "pass": false, "note": "blanket is bunched up"}
+      ],
       "last_checked": "2026-06-08T10:00:00",
       "last_error": null
     }

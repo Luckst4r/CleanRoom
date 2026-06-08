@@ -27,13 +27,22 @@ import requests
 # Vision backend (local Ollama / any OpenAI-compatible endpoint)
 # --------------------------------------------------------------------------- #
 
+# A small local model is far more reliable when it judges ONE concrete thing at a
+# time than when asked a single fuzzy "is this tidy?". So we hand it a numbered
+# checklist and make it report pass/fail per item. The room is tidy only if every
+# item passes — and we learn exactly which item failed, which makes tuning easy.
 SYSTEM_INSTRUCTION = (
-    "You are a tidiness inspector. You are shown one photo of a room and a set "
-    "of criteria for what counts as untidy. Judge ONLY by what is clearly "
-    "visible in the photo. Respond with a single JSON object and nothing else, "
-    'in the form {"tidy": true|false, "reason": "<short explanation>", '
-    '"items": ["<offending item>", ...]}. If the room is tidy, "items" is an '
-    "empty list."
+    "You are a meticulous tidiness inspector. You are given a CURRENT photo of a "
+    "room and a numbered checklist of tidiness rules. You may also be given a "
+    "REFERENCE photo showing the same room when it is considered tidy — use it to "
+    "judge relative items like furniture position, orientation, and arrangement.\n\n"
+    "Evaluate EACH checklist item independently, judging ONLY by what is clearly "
+    "visible in the CURRENT photo. If an item's condition genuinely cannot be seen "
+    "in the photo, mark it pass=true (never guess a violation you cannot see). Keep "
+    "each note short and concrete about what you actually observe.\n\n"
+    "Respond with a single JSON object and nothing else, with one entry per "
+    "checklist item, in order:\n"
+    '{"checks":[{"id":1,"pass":true,"note":"..."},{"id":2,"pass":false,"note":"..."}]}'
 )
 
 
@@ -51,22 +60,27 @@ class VisionBackend:
         self.timeout = timeout
         self.force_json = force_json
 
-    def assess(self, jpeg_bytes, criteria):
-        """Return (tidy: bool, reason: str, items: list[str]). Raises on failure."""
-        data_uri = "data:image/jpeg;base64," + base64.b64encode(jpeg_bytes).decode()
+    def assess(self, jpeg_bytes, checklist, reference_jpeg=None):
+        """Evaluate a room against a checklist.
+
+        Returns (tidy: bool, reason: str, failed_items: list[str], checks: list[dict]).
+        `checks` is the per-item detail: {id, item, pass, note}. Raises on failure.
+        """
+        numbered = "\n".join(f"{i}. {item}" for i, item in enumerate(checklist, 1))
+        content = [{"type": "text", "text": "Checklist:\n" + numbered}]
+        if reference_jpeg is not None:
+            content.append({"type": "text", "text": "REFERENCE photo (room when tidy):"})
+            content.append(_image_part(reference_jpeg))
+        content.append({"type": "text", "text": "CURRENT photo (judge this one):"})
+        content.append(_image_part(jpeg_bytes))
+
         payload = {
             "model": self.model,
             "temperature": 0.1,
-            "max_tokens": 300,
+            "max_tokens": 700,
             "messages": [
                 {"role": "system", "content": SYSTEM_INSTRUCTION},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Criteria:\n" + criteria},
-                        {"type": "image_url", "image_url": {"url": data_uri}},
-                    ],
-                },
+                {"role": "user", "content": content},
             ],
         }
         if self.force_json:
@@ -76,22 +90,46 @@ class VisionBackend:
             headers["Authorization"] = f"Bearer {self.api_key}"
         resp = requests.post(self.url, json=payload, headers=headers, timeout=self.timeout)
         resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-        return _parse_assessment(content)
+        reply = resp.json()["choices"][0]["message"]["content"]
+        return _parse_checks(reply, checklist)
 
 
-def _parse_assessment(content):
-    """Pull the JSON verdict out of the model's reply, defensively."""
-    text = content.strip()
-    # Models sometimes wrap JSON in ```json fences or add prose; grab the first {...}.
-    match = re.search(r"\{.*\}", text, re.DOTALL)
+def _image_part(jpeg_bytes):
+    uri = "data:image/jpeg;base64," + base64.b64encode(jpeg_bytes).decode()
+    return {"type": "image_url", "image_url": {"url": uri}}
+
+
+def _parse_checks(content, checklist):
+    """Turn the model's per-item JSON into a verdict, defensively.
+
+    Conservative by design: an item the model failed to report on is treated as a
+    pass, so missing output never raises a false 'untidy' alarm.
+    """
+    match = re.search(r"\{.*\}", content.strip(), re.DOTALL)
     if not match:
         raise ValueError(f"no JSON found in model reply: {content!r}")
     data = json.loads(match.group(0))
-    tidy = bool(data.get("tidy"))
-    reason = str(data.get("reason", "")).strip()
-    items = [str(x) for x in data.get("items", []) if str(x).strip()]
-    return tidy, reason, items
+
+    # Index the reported checks by their 1-based id.
+    reported = {}
+    for c in data.get("checks", []):
+        try:
+            reported[int(c.get("id"))] = c
+        except (TypeError, ValueError):
+            continue
+
+    checks, failed = [], []
+    for i, item in enumerate(checklist, 1):
+        c = reported.get(i, {})
+        passed = bool(c.get("pass", True))  # unseen/unreported -> assume ok
+        note = str(c.get("note", "")).strip()
+        checks.append({"id": i, "item": item, "pass": passed, "note": note})
+        if not passed:
+            failed.append(item)
+
+    tidy = len(failed) == 0
+    reason = "all checks passed" if tidy else "; ".join(failed)
+    return tidy, reason, failed, checks
 
 
 # --------------------------------------------------------------------------- #
@@ -151,16 +189,18 @@ def _redact(url):
 class RoomState:
     name: str
     source: str
-    criteria: str
+    checklist: list
     debounce: int
-    tidy: bool = True            # assume clean until proven otherwise
+    reference_jpeg: bytes | None = None  # photo of this room when tidy (optional)
+    tidy: bool = True                    # assume clean until proven otherwise
     reason: str = "not checked yet"
-    items: list = field(default_factory=list)
+    items: list = field(default_factory=list)   # failed checklist items
+    checks: list = field(default_factory=list)  # per-item detail for tuning
     last_checked: str | None = None
     last_error: str | None = None
     _recent: collections.deque = field(default_factory=collections.deque, repr=False)
 
-    def record(self, tidy, reason, items):
+    def record(self, tidy, reason, items, checks):
         self.last_checked = _now()
         self.last_error = None
         self._recent.append(tidy)
@@ -171,6 +211,7 @@ class RoomState:
             self.tidy = tidy
             self.reason = reason
             self.items = items
+            self.checks = checks
 
     def record_error(self, err):
         self.last_checked = _now()
@@ -183,6 +224,7 @@ class RoomState:
             "tidy": self.tidy,
             "reason": self.reason,
             "items": self.items,
+            "checks": self.checks,
             "last_checked": self.last_checked,
             "last_error": self.last_error,
         }
@@ -212,12 +254,28 @@ class Monitor:
         debounce = cfg.get("debounce_readings", 2)
         self.rooms = [
             RoomState(
-                name=r["name"], source=r["source"], criteria=r["criteria"], debounce=debounce
+                name=r["name"],
+                source=r["source"],
+                checklist=r["checklist"],
+                debounce=debounce,
+                reference_jpeg=self._load_reference(r.get("reference_image")),
             )
             for r in cfg["rooms"]
         ]
         self._lock = threading.Lock()
         self._stop = threading.Event()
+
+    def _load_reference(self, path):
+        """Pre-load a room's 'tidy' reference photo, if configured."""
+        if not path:
+            return None
+        try:
+            ref = grab_frame(path, self.max_width, self.jpeg_quality)
+            print(f"Loaded reference image: {path}", flush=True)
+            return ref
+        except Exception as exc:
+            print(f"WARNING: could not load reference image {path}: {exc}", flush=True)
+            return None
 
     def snapshot(self):
         """Thread-safe view of current state for the HTTP API."""
@@ -234,9 +292,11 @@ class Monitor:
     def check_room(self, room):
         try:
             jpeg = grab_frame(room.source, self.max_width, self.jpeg_quality)
-            tidy, reason, items = self.backend.assess(jpeg, room.criteria)
+            tidy, reason, items, checks = self.backend.assess(
+                jpeg, room.checklist, room.reference_jpeg
+            )
             with self._lock:
-                room.record(tidy, reason, items)
+                room.record(tidy, reason, items, checks)
             verdict = "TIDY" if tidy else "UNTIDY"
             print(f"[{_now()}] {room.name}: {verdict} ({reason})", flush=True)
         except Exception as exc:  # keep prior state; never crash the loop

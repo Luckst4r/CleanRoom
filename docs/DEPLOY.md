@@ -133,24 +133,35 @@ home LAN, but do **not** commit real credentials — keep the committed value a
 placeholder and have the user fill it in locally, which `.gitignore` does not cover,
 so instead consider an env-substituted source if the user prefers.)
 
-**3.3** One-shot sanity check BEFORE running the full service — first with a known
-photo, then live.
+**3.3** Capture the reference photo, then run the one-shot check. Detection uses a
+per-item **checklist** (`rooms[0].checklist` in `config.yaml`), and several items
+(chair pushed in, lounge chair facing the right way, pillows arranged) are judged
+against an optional **reference photo of the room when tidy**. So:
 
-```bash
-# (optional) prove the pipeline end-to-end with a deliberately messy photo
-python check.py --source samples/messy.jpg      # expect UNTIDY
-python check.py --source samples/tidy.jpg        # expect TIDY
+1. Have the user make the room genuinely tidy.
+2. Capture that as the reference:
+   ```bash
+   python check.py                       # grabs a frame -> last_frame.jpg
+   open last_frame.jpg                    # confirm framing is good; reaim camera if not
+   cp last_frame.jpg reference_childs_bedroom.jpg
+   ```
+   Then set `rooms[0].reference_image: "reference_childs_bedroom.jpg"` in
+   `config.yaml` (I'll make this edit on the branch).
+3. Now exercise the checklist. `check.py` prints a ✅/❌ line **per item**, which is
+   exactly how we tune:
+   ```bash
+   python check.py                        # tidy room -> expect all ✅, VERDICT TIDY
+   # then introduce ONE offender (e.g. drop a book on the table) and rerun:
+   python check.py                        # expect that one item ❌, VERDICT UNTIDY
+   ```
 
-# now the live camera (uses rooms[0].source from config.yaml)
-python check.py
-open last_frame.jpg
-```
-
-✅ `last_frame.jpg` shows the room well-framed, and the printed VERDICT is sensible.
-**This is the camera-aim + criteria-tuning loop:** if the framing is bad, have the
-user physically reaim the camera and rerun. If the verdict is wrong, adjust
-`rooms[0].criteria` wording in `config.yaml` and rerun `python check.py` until it's
-reliable on both a messy and a tidy version of the real room.
+✅ With the room tidy, every item is ✅; introducing a real offender flips exactly
+the right item to ❌. **This is the tuning loop:** if an item is wrong, reword that
+one line in `rooms[0].checklist` and rerun `check.py`. Walk through each of the
+seven offenders once. The relative items (chair, lounge chair) depend on the
+reference photo — if they misfire, recapture a cleaner reference. If a particular
+item is hopeless on the local model, note it and we decide whether to drop it or try
+a larger model (`llama3.2-vision`).
 
 **3.4** Run the service.
 
@@ -226,8 +237,9 @@ With the detector running and the screen live, do the real-world loop:
 ✅ Transitions both ways are correct and reasonably prompt.
 **Tuning knobs** (in `detector/config.yaml`): `poll_interval_seconds` (faster
 reaction), `debounce_readings` (fewer = snappier, more = steadier), and the
-`criteria` text (what counts as untidy). Re-run `python check.py` against the live
-camera while tuning.
+`checklist` items (what counts as untidy, one observable condition per line).
+Re-run `python check.py` against the live camera while tuning — its per-item ✅/❌
+output tells you which line to reword.
 
 ---
 
@@ -256,7 +268,7 @@ the LAN.
 | Symptom | Likely cause / fix |
 |---|---|
 | `check.py`/service: can't open stream | wrong RTSP creds/IP, VLAN split, or RTSP off (Phase 2.2) |
-| Verdict wrong/flaky | tune `criteria`; try a sharper model; raise `debounce_readings` |
+| Verdict wrong/flaky | reword the failing `checklist` item; recapture reference; raise `debounce_readings`; try `llama3.2-vision` |
 | `/status` works locally, not from phone | macOS firewall blocking Python (Phase 3.5) |
 | Screen "No data" | WiFi creds or `STATUS_URL`/Mac IP wrong (Phase 4.4) |
 | Screen black | re-flash; bad/charge-only cable; BOOT-button download mode |
