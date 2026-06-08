@@ -66,9 +66,9 @@ rooms:
 
     # This room is almost entirely reference-relative: most rules mean "the same as
     # the reference photo." Capture the reference with the room exactly how it should
-    # look. NOTE: one brown chair is partially obscured from the camera, and the camera
-    # also sees into the kitchen (bar stools) — the rules tell the model to judge only
-    # what is visible.
+    # look. NOTE: one brown chair is partially obscured from the camera — the rules
+    # tell the model to judge only what is visible. (The kitchen / bar stools will get
+    # their own camera + room entry later.)
     reference_image: "reference_living_room.jpg"
 
     checklist:
@@ -86,5 +86,3 @@ rooms:
         rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
       - label: "Chair pillows gone"
         rule: "There is one white pillow on each brown chair, as in the reference photo. A brown chair may be partially visible; judge only what is visible. Fail only if a white pillow that is present in the reference is clearly missing from a brown chair."
-      - label: "Bar stools out"
-        rule: "The bar stools visible in the kitchen area are tucked under the kitchen island, as in the reference photo. Fail only if a stool is clearly pulled out from under the island versus the reference."
