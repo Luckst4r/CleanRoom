@@ -44,7 +44,7 @@ rooms:
     # with check.py — wording is the main accuracy lever for a local model.
     checklist:
       - "There are no clothes on the floor; the floor is clear of clothing."
-      - "The bed is made: the blanket/duvet is pulled up and flat, not bunched or thrown back."
+      - "The bed is roughly made: the blanket or duvet is pulled up to cover most of the mattress. Minor wrinkles, lumps, or slight bunching are perfectly fine. This fails ONLY if the bed is clearly unmade — e.g. the blanket/sheets are thrown back or piled in a heap, or the bare mattress or fitted sheet is largely exposed."
       - "There are no pillows on the floor; pillows are on the bed or the lounge chair."
       - "There are no books left out on a table or desk; surfaces are clear of books."
       - "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
