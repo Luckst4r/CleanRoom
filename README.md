@@ -37,7 +37,8 @@ text to taste.
 ## Setup
 
 See **[docs/SETUP.md](docs/SETUP.md)** for full step-by-step instructions
-(Tapo RTSP, running the detector, flashing the screen).
+(Tapo RTSP, running the detector, flashing the screen). For a guided end-to-end
+deploy on the Mac mini, see **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 Quick version:
 
