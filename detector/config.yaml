@@ -1,18 +1,21 @@
 # CleanRoom detector configuration
-#
-# The API key is NOT stored here. Put it in detector/.env as:
-#   VENICE_API_KEY=sk-...
-# (copy detector/.env.example to detector/.env)
 
 poll_interval_seconds: 60   # how often each room is checked (tidiness changes slowly)
 debounce_readings: 2        # a room only flips state after this many identical readings in a row
 
-venice:
-  base_url: "https://api.venice.ai/api/v1"
-  model: "qwen3-vl-235b-a22b"   # any Venice vision model; check GET /api/v1/models for current ids
-  max_image_width: 1024         # frames are downscaled to this width before upload (saves tokens)
+vision:
+  # Local, OpenAI-compatible vision endpoint. The default below is Ollama running
+  # on the Mac mini, so camera frames never leave the machine.
+  #   1. Install Ollama (https://ollama.com), then: ollama pull qwen2.5vl:7b
+  #   2. Ollama serves the API at http://localhost:11434/v1 automatically.
+  base_url: "http://localhost:11434/v1"
+  model: "qwen2.5vl:7b"   # a vision model that fits in 16GB; alternatives: minicpm-v, llama3.2-vision
+  force_json: true        # ask the server to return strict JSON (Ollama supports this)
+  max_image_width: 1024   # frames are downscaled to this width before analysis
   jpeg_quality: 80
-  timeout_seconds: 60
+  timeout_seconds: 120    # local models can be slower than cloud; give them room
+  # api_key: only needed for cloud backends. Leave unset for local Ollama. If a
+  # backend needs one, set it in detector/.env as VISION_API_KEY rather than here.
 
 server:
   host: "0.0.0.0"   # the LilyGo screen polls this; 0.0.0.0 = reachable on your LAN

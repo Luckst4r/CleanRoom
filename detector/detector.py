@@ -5,7 +5,7 @@ for testing, a local image file), asks a vision model whether the room meets its
 tidiness criteria, and keeps a debounced "tidy / untidy" state.
 
 The vision backend is intentionally isolated in `VisionBackend` so it can be
-swapped (e.g. Venice cloud -> a local model) without touching the rest.
+swapped (e.g. a local Ollama model -> a different runtime) without touching the rest.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import requests
 
 
 # --------------------------------------------------------------------------- #
-# Vision backend (Venice, OpenAI-compatible)
+# Vision backend (local Ollama / any OpenAI-compatible endpoint)
 # --------------------------------------------------------------------------- #
 
 SYSTEM_INSTRUCTION = (
@@ -38,13 +38,18 @@ SYSTEM_INSTRUCTION = (
 
 
 class VisionBackend:
-    """Calls a Venice (OpenAI-compatible) vision model."""
+    """Calls a local (or any OpenAI-compatible) vision model.
 
-    def __init__(self, base_url, model, api_key, timeout=60):
+    Defaults target Ollama on the Mac mini so frames never leave the machine.
+    `api_key` is optional — local Ollama ignores it.
+    """
+
+    def __init__(self, base_url, model, api_key=None, timeout=120, force_json=True):
         self.url = base_url.rstrip("/") + "/chat/completions"
         self.model = model
         self.api_key = api_key
         self.timeout = timeout
+        self.force_json = force_json
 
     def assess(self, jpeg_bytes, criteria):
         """Return (tidy: bool, reason: str, items: list[str]). Raises on failure."""
@@ -64,10 +69,11 @@ class VisionBackend:
                 },
             ],
         }
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        if self.force_json:
+            payload["response_format"] = {"type": "json_object"}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:  # local Ollama needs no auth; cloud backends do
+            headers["Authorization"] = f"Bearer {self.api_key}"
         resp = requests.post(self.url, json=payload, headers=headers, timeout=self.timeout)
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"]
@@ -191,10 +197,14 @@ def _now():
 # --------------------------------------------------------------------------- #
 
 class Monitor:
-    def __init__(self, cfg, api_key):
-        v = cfg["venice"]
+    def __init__(self, cfg, api_key=None):
+        v = cfg["vision"]
         self.backend = VisionBackend(
-            v["base_url"], v["model"], api_key, v.get("timeout_seconds", 60)
+            v["base_url"],
+            v["model"],
+            api_key=api_key,
+            timeout=v.get("timeout_seconds", 120),
+            force_json=v.get("force_json", True),
         )
         self.max_width = v.get("max_image_width", 1024)
         self.jpeg_quality = v.get("jpeg_quality", 80)

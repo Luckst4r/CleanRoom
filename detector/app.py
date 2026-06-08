@@ -7,9 +7,8 @@ Endpoints:
   GET /status   -> JSON state (consumed by the LilyGo firmware)
   GET /         -> tiny human-readable HTML preview (open in a browser to eyeball it)
 
-Run:
+Run (after `ollama pull qwen2.5vl:7b`):
   cd detector
-  cp .env.example .env   # then put your VENICE_API_KEY in it
   pip install -r requirements.txt
   python app.py
 """
@@ -69,11 +68,8 @@ def create_app(monitor: Monitor) -> Flask:
 
 def main():
     load_dotenv(HERE / ".env")
-    api_key = os.environ.get("VENICE_API_KEY")
-    if not api_key:
-        raise SystemExit(
-            "VENICE_API_KEY is not set. Copy .env.example to .env and add your key."
-        )
+    # Local Ollama needs no key; only cloud backends do. Optional by design.
+    api_key = os.environ.get("VISION_API_KEY")
 
     cfg = load_config()
     monitor = Monitor(cfg, api_key)

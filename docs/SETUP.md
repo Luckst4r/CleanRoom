@@ -28,11 +28,26 @@ Put that URL into `detector/config.yaml` under `rooms[0].source`.
 
 ## 2. Detector (Mac mini M4)
 
+First, the **local** vision model via [Ollama](https://ollama.com):
+
+```bash
+# install Ollama (download the macOS app or `brew install ollama`), then:
+ollama pull qwen2.5vl:7b   # ~6 GB; fits comfortably in 16 GB alongside the OS
+```
+
+Ollama then serves an OpenAI-compatible API at `http://localhost:11434/v1`, which
+is what `detector/config.yaml` points at by default. No API key, no cloud — frames
+stay on the Mac.
+
+> Model choice: `qwen2.5vl:7b` is a good default for 16 GB. Alternatives:
+> `minicpm-v` (smaller/faster) or `llama3.2-vision` (larger, slower on 16 GB).
+> Swap the `model:` value in `config.yaml` to try another — run `ollama list` to
+> see what you've pulled.
+
+Then the detector itself:
+
 ```bash
 cd detector
-cp .env.example .env
-# edit .env and set VENICE_API_KEY=...  (get a key at https://venice.ai/settings/api)
-
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
@@ -57,10 +72,8 @@ confirm the verdicts make sense, then point it back at the camera.
 - **How fast it reacts** — `poll_interval_seconds` (default 60) and
   `debounce_readings` (default 2: two identical readings in a row before the
   state flips, which prevents flicker).
-- **Model** — `venice.model`. List current options:
-  ```bash
-  curl -H "Authorization: Bearer $VENICE_API_KEY" https://api.venice.ai/api/v1/models
-  ```
+- **Model** — `vision.model`. List what you've pulled with `ollama list`, or
+  browse more vision models at https://ollama.com/search?c=vision.
 
 ### Run it on boot (optional)
 

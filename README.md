@@ -1,8 +1,9 @@
 # CleanRoom
 
-A local room-tidiness monitor. A camera watches a room; a vision model decides
-whether the room is tidy; a small screen shows the result at a glance — **green
-with a smiley when clean, red with the room name when untidy**.
+A fully local room-tidiness monitor. A camera watches a room; a vision model
+running on the Mac mini decides whether the room is tidy; a small screen shows
+the result at a glance — **green with a smiley when clean, red with the room name
+when untidy**. Nothing leaves your network.
 
 This first version watches **one room (a child's bedroom)**. It's built so more
 rooms can be added later by appending to `detector/config.yaml`.
@@ -20,7 +21,7 @@ rooms can be added later by appending to `detector/config.yaml`.
 ```
 Tapo cam ──RTSP──> detector (Mac mini) ──HTTP /status──> LilyGo screen
                      │
-                     └── sends a frame to Venice.ai vision model: "is this room tidy?"
+                     └── sends a frame to a LOCAL vision model (Ollama): "is this room tidy?"
 ```
 
 - **`detector/`** — Python service. Every 60s it grabs a frame, asks the vision
@@ -41,9 +42,11 @@ See **[docs/SETUP.md](docs/SETUP.md)** for full step-by-step instructions
 Quick version:
 
 ```bash
+# One-time: install Ollama (https://ollama.com) and pull a vision model
+ollama pull qwen2.5vl:7b
+
 # Detector (on the Mac mini)
 cd detector
-cp .env.example .env          # add your VENICE_API_KEY
 pip install -r requirements.txt
 python app.py                 # serves http://<mac-ip>:8080/status
 
@@ -53,9 +56,10 @@ cp src/config.h.example src/config.h   # add WiFi + the Mac's IP
 pio run -t upload
 ```
 
-## A note on privacy
+## Privacy
 
-The detector currently sends camera frames to **Venice.ai** (a cloud service) for
-analysis, so frames of the child's bedroom leave your network. The vision backend
-is isolated in `detector/detector.py` (`VisionBackend`) so it can be swapped for a
-fully local model later without changing anything else.
+Everything runs on your LAN: the camera, the Mac mini (which runs the vision model
+locally via Ollama), and the screen. Camera frames are never sent to any cloud
+service. The vision backend is isolated in `detector/detector.py` (`VisionBackend`)
+and talks to any OpenAI-compatible endpoint, so you can point it at a different
+local runtime (e.g. MLX) by editing `base_url`/`model` in `config.yaml`.
