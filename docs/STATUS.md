@@ -10,7 +10,7 @@ See `CLAUDE.md` for architecture and conventions.
   overnight.
 - **Scheduler**: quiet 00:00–06:00 Central (nothing checked); kid's room every 2 min
   during Mon–Fri 7–10am & 3–8pm and Sat–Sun 7am–8pm, else every 15 min; living room
-  every 15 min. Round-robin across rooms (one warm model at a time).
+  every 2 min. Round-robin across rooms (one warm model at a time).
 - Detection is **reference-relative** against `reference_<room>.jpg` baselines
   (gitignored, captured via `check.py`).
 

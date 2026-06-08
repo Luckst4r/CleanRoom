@@ -84,9 +84,9 @@ rooms:
     # their own camera + room entry later.)
     reference_image: "reference_living_room.jpg"
 
-    # The living room changes slowly; check every 15 minutes (outside quiet hours).
+    # Checked every 2 minutes (outside quiet hours), round-robin with the bedroom.
     schedule:
-      default_interval_seconds: 900
+      default_interval_seconds: 120
 
     checklist:
       - label: "Items on carpet"

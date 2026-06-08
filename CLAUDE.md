@@ -20,7 +20,7 @@ Tapo 2K cams --RTSP--> detector (Mac mini, Ollama qwen2.5vl:7b) --HTTP /status--
   reference photo." This is what makes "acceptable state = tidy" work.
 - **Scheduling** (`detector/schedule.py`): timezone-aware (America/Chicago) quiet
   hours (00:00–06:00, nothing checked) + per-room cadence (kid's room every 2 min
-  during active windows, 15 min otherwise; living room every 15 min). The loop is a
+  during active windows, 15 min otherwise; living room every 2 min). The loop is a
   due-based **round-robin** across rooms (one warm model = one inference at a time).
 
 ## Layout
