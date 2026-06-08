@@ -101,5 +101,3 @@ rooms:
         rule: "The couch pillows are present and tidily arranged, roughly in the same orientation and positions as the reference photo. Their exact left-to-right color order does NOT matter. Fail only if pillows are clearly knocked over, squashed flat, piled up, dumped on the seat or floor, or otherwise obviously messy compared to the reference."
       - label: "Throw blanket"
         rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
-      - label: "Chair pillows gone"
-        rule: "Each brown chair normally has a white pillow (as in the reference). One brown chair is often partially hidden by the camera angle. PASS unless a brown chair that is FULLY and CLEARLY visible, with nobody sitting on it, plainly has its white pillow removed. If a chair is partially hidden, in shadow, or someone is sitting on it, PASS."
