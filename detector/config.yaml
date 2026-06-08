@@ -66,7 +66,7 @@ rooms:
       - label: "Pillows on floor"
         rule: "There are no pillows on the floor; pillows are on the bed or the lounge chair."
       - label: "Books left out"
-        rule: "There are no books left out on a table or desk; surfaces are clear of books."
+        rule: "Compared to the reference photo, no NEW books have been left out on a table or desk. Anything already on the desk or shelves in the reference is fine. Be conservative: only fail if you clearly see an actual book (open, or in a stack) on a surface that is NOT in the reference. Do NOT count tablets, laptops, boxes, picture frames, remotes, or decorative items as books."
       - label: "Art supplies out"
         rule: "There are no coloring or art supplies (crayons, markers, paper) left out on a table or desk."
       - label: "Lounge chair messy"
