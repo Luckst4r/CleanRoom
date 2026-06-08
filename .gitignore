@@ -12,5 +12,6 @@ venv/
 .pio/
 .vscode/
 
-# local test images
+# local test images / scratch captures
 detector/samples/
+detector/last_frame.jpg
