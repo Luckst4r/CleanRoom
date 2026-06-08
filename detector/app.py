@@ -16,6 +16,7 @@ Run (after `ollama pull qwen2.5vl:7b`):
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pathlib
 import threading
@@ -35,6 +36,8 @@ def load_config():
 
 
 def create_app(monitor: Monitor) -> Flask:
+    # The screen polls /status every few seconds; don't log every request.
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)
     app = Flask(__name__)
 
     @app.get("/status")

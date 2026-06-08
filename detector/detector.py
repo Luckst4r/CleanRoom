@@ -185,7 +185,16 @@ def grab_frame(source, max_width, jpeg_quality):
 
 
 def _grab_stream_frame(url):
-    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+    # Force TCP transport + a socket timeout so a stalled RTSP stream fails fast
+    # instead of blocking the single-threaded detection loop indefinitely.
+    os.environ.setdefault(
+        "OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp|stimeout;5000000"
+    )
+    params = [
+        cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000,
+        cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000,
+    ]
+    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
     try:
         if not cap.isOpened():
             raise RuntimeError(f"could not open stream: {_redact(url)}")
