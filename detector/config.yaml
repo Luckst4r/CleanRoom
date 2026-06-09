@@ -101,3 +101,24 @@ rooms:
         rule: "The couch pillows are present and tidily arranged, roughly in the same orientation and positions as the reference photo. Their exact left-to-right color order does NOT matter. Fail only if pillows are clearly knocked over, squashed flat, piled up, dumped on the seat or floor, or otherwise obviously messy compared to the reference."
       - label: "Throw blanket"
         rule: "The throw blanket is draped over the couch the same way as in the reference photo. Fail if it is bunched up, removed, fallen off, or clearly rearranged versus the reference."
+
+  - name: "Butler Pantry"
+    # RTSP URL kept out of git — set in detector/.env as:
+    #   CLEANROOM_RTSP_URL_BUTLERPANTRY=rtsp://USER:PASS@CAM_IP:554/stream1
+    source: "${CLEANROOM_RTSP_URL_BUTLERPANTRY}"
+
+    # Narrow scope, ABSOLUTE rules (no reference photo on purpose — these are
+    # location-based, not "same as a baseline"): shoes must be off the tile floor
+    # (on the wall box is fine), and the granite counter at the bottom must be empty.
+    reference_image: ""
+
+    schedule:
+      default_interval_seconds: 300   # every 5 min (adjust to taste)
+
+    # NOTE: the screen shows each failed check's `label`, so the labels here are
+    # written as the action message the user wants to see.
+    checklist:
+      - label: "Put shoes away"
+        rule: "Look at the TILE FLOOR. FAIL if there are any shoes sitting on the tile floor. Shoes placed on TOP of the white box mounted on the wall are ALLOWED — ignore those and do not fail for shoes on the white box. Only shoes directly on the tile floor count as a problem."
+      - label: "Clear the counter off"
+        rule: "Look at the granite countertop along the BOTTOM of the image. It must be completely empty. FAIL if there is ANY loose object sitting on the granite counter (bottles, dishes, bags, boxes, clutter — anything). Ignore permanent built-in fixtures and the wall-mounted white box; only flag loose items placed on the counter surface."

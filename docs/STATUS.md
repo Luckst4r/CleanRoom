@@ -4,7 +4,9 @@ Snapshot for picking the project up in a new session (e.g. Cowork on the Mac min
 See `CLAUDE.md` for architecture and conventions.
 
 ## Live right now
-- Two rooms monitored: **Child's Bedroom**, **Living Room**. The detector runs as a
+- Three rooms monitored: **Child's Bedroom**, **Living Room**, **Butler Pantry**
+  (narrow scope: shoes off the tile floor + empty counter, absolute rules, no
+  reference photo). The detector runs as a
   launchd service on the Mac mini; the LilyGo screen shows status + a per-room
   countdown ("Next: <room> M:SS" / "Checking <room>…") and "Sleeping until 6:00 AM"
   overnight.

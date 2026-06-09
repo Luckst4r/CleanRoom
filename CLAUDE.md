@@ -13,14 +13,17 @@ Tapo 2K cams --RTSP--> detector (Mac mini, Ollama qwen2.5vl:7b) --HTTP /status--
 
 ## Current state (LIVE on real hardware)
 - **Deployed and running** on the user's Mac mini as a launchd service.
-- **Two rooms**: `Child's Bedroom` and `Living Room`. Designed to scale (closet,
-  kitchen next) by adding entries under `rooms:` in `detector/config.yaml`.
+- **Three rooms**: `Child's Bedroom`, `Living Room`, `Butler Pantry`. Designed to
+  scale (kitchen, closet next) by adding entries under `rooms:` in `detector/config.yaml`.
+  Butler Pantry uses **absolute rules, no reference photo** (shoes off the tile floor,
+  empty counter); the other two are reference-relative.
 - Detection is **reference-relative**: each room has a `reference_<room>.jpg`
   baseline photo (gitignored) and most checklist rules mean "compared to the
   reference photo." This is what makes "acceptable state = tidy" work.
 - **Scheduling** (`detector/schedule.py`): timezone-aware (America/Chicago) quiet
   hours (00:00–06:00, nothing checked) + per-room cadence (kid's room every 2 min
-  during active windows, 15 min otherwise; living room every 2 min). The loop is a
+  during active windows, 15 min otherwise; living room every 2 min; butler pantry
+  every 5 min). The loop is a
   due-based **round-robin** across rooms (one warm model = one inference at a time).
 
 ## Layout
